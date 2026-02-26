@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { SparkSessionBuilder, SparkSession, DataFrame, Column } from '../src/pyspark';
+import { SparkSessionBuilder, SparkSession, DataFrame, Column, RDD } from '../src/pyspark';
 import { createJvmProxy, type JvmHandle } from '../src/proxy';
 
 function handle(id: string): JvmHandle {
@@ -155,6 +155,50 @@ test('SparkSession parity wrappers expose createDataFrame, udf/udtf, conf, and v
   assert.ok(calls.find((entry) => entry[2] === 'conf'));
   assert.ok(calls.find((entry) => entry[2] === 'register' && (entry[3] as unknown[])[0] === 'my_udf'));
   assert.ok(calls.find((entry) => entry[2] === 'version'));
+});
+
+
+
+test('RDD parity wrappers delegate key/value, partition, action, and persistence operations', () => {
+  const { calls, gateway } = createGatewayRecorder();
+  const rdd = new RDD(gateway as never, handle('rdd-main'));
+  const other = new RDD(gateway as never, handle('rdd-other'));
+
+  rdd.map(() => 1);
+  rdd.filter(() => true);
+  rdd.flatMap(() => [1]);
+  rdd.mapPartitions(() => []);
+  rdd.glom();
+  rdd.reduce((a: number, b: number) => a + b);
+  rdd.reduceByKey((a: number, b: number) => a + b, 4);
+  rdd.groupByKey(4);
+  rdd.join(other, 3);
+  rdd.cogroup(other, 2);
+  rdd.repartition(10);
+  rdd.coalesce(2, true);
+  rdd.cache();
+  rdd.persist();
+  rdd.unpersist();
+  rdd.checkpoint();
+  rdd.localCheckpoint();
+  rdd.isCheckpointed();
+  rdd.getCheckpointFile();
+  rdd.collect();
+  rdd.count();
+  rdd.first();
+  rdd.take(5);
+  rdd.saveAsTextFile('/tmp/out');
+
+  assert.ok(calls.find((entry) => entry[2] === 'reduceByKey'));
+  assert.ok(calls.find((entry) => entry[2] === 'groupByKey'));
+  assert.ok(calls.find((entry) => entry[2] === 'join'));
+  assert.ok(calls.find((entry) => entry[2] === 'cogroup'));
+  assert.ok(calls.find((entry) => entry[2] === 'mapPartitions'));
+  assert.ok(calls.find((entry) => entry[2] === 'repartition'));
+  assert.ok(calls.find((entry) => entry[2] === 'coalesce'));
+  assert.ok(calls.find((entry) => entry[2] === 'checkpoint'));
+  assert.ok(calls.find((entry) => entry[2] === 'count'));
+  assert.ok(calls.find((entry) => entry[2] === 'saveAsTextFile'));
 });
 
 test('createJvmProxy forwards unknown methods for parity fallback', async () => {

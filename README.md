@@ -67,6 +67,24 @@ Added wrappers include:
 - SparkSession parity helpers: `createDataFrame`, typed `udf`/`udtf` registration wrappers, `conf` runtime config wrapper, and `version` convenience accessor.
 - View helpers: `createOrReplaceTempView` and `createGlobalTempView`.
 
+## RDD API (expanded)
+
+`RDD` now includes broader parity wrappers for common transformations and actions:
+- Key/value ops: `reduceByKey`, `groupByKey`, `join`, `cogroup`.
+- Partition ops: `mapPartitions`, `glom`, `repartition`, `coalesce`.
+- Actions/output: `count`, `take`, `first`, `saveAsTextFile`.
+- Persistence/checkpoint controls: `cache`, `persist`, `unpersist`, `checkpoint`, `localCheckpoint`, `isCheckpointed`, `getCheckpointFile`.
+
+```ts
+const pairs = (spark.invoke('sparkContext') as any).parallelize([['a', 1], ['a', 2], ['b', 1]]);
+const rdd = pairs as any;
+
+const reduced = rdd.reduceByKey((a: number, b: number) => a + b, 4);
+reduced.cache();
+reduced.checkpoint();
+reduced.saveAsTextFile('/data/rdd-out');
+```
+
 ## MLlib (implemented)
 
 ```ts

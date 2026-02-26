@@ -703,12 +703,92 @@ export class RDD {
     return this.proxy.flatMap(fn);
   }
 
+  mapPartitions(fn: unknown, preservesPartitioning?: boolean): unknown {
+    return preservesPartitioning === undefined
+      ? this.proxy.mapPartitions(fn)
+      : this.proxy.mapPartitions(fn, preservesPartitioning);
+  }
+
+  glom(): unknown {
+    return this.proxy.glom();
+  }
+
   reduce(fn: unknown): unknown {
     return this.proxy.reduce(fn);
   }
 
+  reduceByKey(func: unknown, numPartitions?: number): unknown {
+    return numPartitions === undefined ? this.proxy.reduceByKey(func) : this.proxy.reduceByKey(func, numPartitions);
+  }
+
+  groupByKey(numPartitions?: number): unknown {
+    return numPartitions === undefined ? this.proxy.groupByKey() : this.proxy.groupByKey(numPartitions);
+  }
+
+  join(other: RDD, numPartitions?: number): unknown {
+    return numPartitions === undefined ? this.proxy.join(other) : this.proxy.join(other, numPartitions);
+  }
+
+  cogroup(other: RDD, numPartitions?: number): unknown {
+    return numPartitions === undefined ? this.proxy.cogroup(other) : this.proxy.cogroup(other, numPartitions);
+  }
+
+  repartition(numPartitions: number): unknown {
+    return this.proxy.repartition(numPartitions);
+  }
+
+  coalesce(numPartitions: number, shuffle = false): unknown {
+    return this.proxy.coalesce(numPartitions, shuffle);
+  }
+
+  cache(): unknown {
+    return this.proxy.cache();
+  }
+
+  persist(storageLevel?: unknown): unknown {
+    return storageLevel === undefined ? this.proxy.persist() : this.proxy.persist(storageLevel);
+  }
+
+  unpersist(blocking = false): unknown {
+    return this.proxy.unpersist(blocking);
+  }
+
+  checkpoint(): unknown {
+    return this.proxy.checkpoint();
+  }
+
+  localCheckpoint(): unknown {
+    return this.proxy.localCheckpoint();
+  }
+
+  isCheckpointed(): unknown {
+    return this.proxy.isCheckpointed();
+  }
+
+  getCheckpointFile(): unknown {
+    return this.proxy.getCheckpointFile();
+  }
+
   collect(): unknown {
     return this.proxy.collect();
+  }
+
+  count(): unknown {
+    return this.proxy.count();
+  }
+
+  first(): unknown {
+    return this.proxy.first();
+  }
+
+  take(num: number): unknown {
+    return this.proxy.take(num);
+  }
+
+  saveAsTextFile(path: string, compressionCodecClass?: string): unknown {
+    return compressionCodecClass === undefined
+      ? this.proxy.saveAsTextFile(path)
+      : this.proxy.saveAsTextFile(path, compressionCodecClass);
   }
 
   invoke(methodName: string, ...args: unknown[]): unknown {
