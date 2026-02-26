@@ -61,8 +61,29 @@ const custom = await spark.ml.create('org.apache.spark.ml.feature.Bucketizer');
 await custom.invoke('setInputCol', 'raw');
 ```
 
+
+## Structured Streaming (implemented)
+
+```ts
+const input = await spark.readStream
+  .format('json')
+  .option('maxFilesPerTrigger', 1)
+  .load('/data/in');
+
+const query = await input.writeStream
+  .format('parquet')
+  .outputMode('append')
+  .queryName('events')
+  .start('/data/out');
+
+await query.processAllAvailable();
+await query.stop();
+```
+
+Use `spark.streams` to access query-manager behavior (`get`, `awaitAnyTermination`, `resetTerminated`) and `.invoke(...)` for any unwrapped streaming API.
+
 ## Parity strategy
 
-- First-class wrappers in TypeScript for common PySpark-style classes (`SparkSession`, `DataFrame`, `GroupedData`, `RDD`).
+- First-class wrappers in TypeScript for common PySpark-style classes (`SparkSession`, `DataFrame`, `GroupedData`, `RDD`, `MLlib`, `Structured Streaming`).
 - Generic dynamic JVM proxy passthrough for APIs not explicitly wrapped yet.
 - `.invoke(methodName, ...args)` on wrappers to ensure newly added Spark APIs remain reachable.

@@ -1,6 +1,7 @@
 import { Node4jGateway, type Node4jClient } from './gateway';
 import { createJvmProxy, type JvmHandle } from './proxy';
 import { MLlib } from './mllib';
+import { DataStreamReader, DataStreamWriter, StreamingQueryManager } from './streaming';
 
 export class SparkSessionBuilder {
   private readonly gateway: Node4jGateway;
@@ -80,6 +81,16 @@ export class SparkSession {
     return new MLlib(this.gateway);
   }
 
+  get readStream(): DataStreamReader {
+    const readerProxy = this.proxy.readStream() as { __handle: JvmHandle };
+    return new DataStreamReader(this.gateway, readerProxy.__handle);
+  }
+
+  get streams(): StreamingQueryManager {
+    const managerProxy = this.proxy.streams() as { __handle: JvmHandle };
+    return new StreamingQueryManager(this.gateway, managerProxy.__handle);
+  }
+
   stop(): unknown {
     return this.proxy.stop();
   }
@@ -119,6 +130,11 @@ export class DataFrame {
 
   show(numRows = 20, truncate: boolean | number = true, vertical = false): Promise<unknown> {
     return this.proxy.show(numRows, truncate, vertical) as Promise<unknown>;
+  }
+
+  get writeStream(): DataStreamWriter {
+    const writerProxy = this.proxy.writeStream() as { __handle: JvmHandle };
+    return new DataStreamWriter(this.gateway, writerProxy.__handle);
   }
 
   toJvmHandle(): JvmHandle {
