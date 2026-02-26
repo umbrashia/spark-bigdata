@@ -85,24 +85,32 @@ reduced.checkpoint();
 reduced.saveAsTextFile('/data/rdd-out');
 ```
 
-## MLlib (implemented)
+## MLlib (expanded)
 
 ```ts
+const tokenizer = await spark.ml.tokenizer();
+const hashingTF = await spark.ml.hashingTF();
+const idf = await spark.ml.idf();
+
 const lr = await spark.ml.logisticRegression();
-lr.set('maxIter', 50).set('regParam', 0.01);
+lr.setParams({ maxIter: 50, regParam: 0.01 });
 
-const assembler = await spark.ml.vectorAssembler();
-assembler.set('inputCols', ['f1', 'f2']).set('outputCol', 'features');
+const paramGrid = await spark.ml.paramGridBuilder();
+paramGrid.addGrid('maxIter', [10, 50]).build();
 
-const pipeline = await spark.ml.pipeline();
-pipeline.setStages([assembler, lr]);
+const cv = await spark.ml.crossValidator();
+cv.setEstimator(lr).setEvaluator(await spark.ml.multiclassClassificationEvaluator());
 
-const model = await pipeline.fit(trainingDf);
+const model = await cv.fit(trainingDf);
 const predictions = await model.transform(testDf);
-
-const evaluator = await spark.ml.multiclassClassificationEvaluator();
-const score = await evaluator.evaluate(predictions);
 ```
+
+Added MLlib wrappers include:
+- Algorithms: `ALS`, `NaiveBayes`, `PCA`, `DecisionTreeRegressor` (plus previously wrapped classifiers/regressors/clustering).
+- Tuning APIs: `CrossValidator`, `TrainValidationSplit`, `ParamGridBuilder`.
+- Feature pipeline components: `Tokenizer`, `HashingTF`, `IDF`, `VectorIndexer`, `Imputer`, `VectorAssembler`, `StringIndexer`, `OneHotEncoder`, `StandardScaler`.
+- Model persistence helpers: `save`, `write`, and MLlib loaders (`loadPipelineModel`, `loadCrossValidatorModel`, `loadTrainValidationSplitModel`).
+- Params ergonomics: `setParams`, `getParam`, `getOrDefault`, `explainParams`, `extractParamMap`, `uid`.
 
 For any MLlib API not wrapped yet, use generic construction:
 
