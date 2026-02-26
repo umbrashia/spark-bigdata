@@ -1,5 +1,6 @@
 import { Node4jGateway, type Node4jClient } from './gateway';
 import { createJvmProxy, type JvmHandle } from './proxy';
+import { MLlib } from './mllib';
 
 export class SparkSessionBuilder {
   private readonly gateway: Node4jGateway;
@@ -75,6 +76,10 @@ export class SparkSession {
     return this.proxy.sparkContext();
   }
 
+  get ml(): MLlib {
+    return new MLlib(this.gateway);
+  }
+
   stop(): unknown {
     return this.proxy.stop();
   }
@@ -114,6 +119,10 @@ export class DataFrame {
 
   show(numRows = 20, truncate: boolean | number = true, vertical = false): Promise<unknown> {
     return this.proxy.show(numRows, truncate, vertical) as Promise<unknown>;
+  }
+
+  toJvmHandle(): JvmHandle {
+    return this.handle;
   }
 
   invoke(methodName: string, ...args: unknown[]): unknown {

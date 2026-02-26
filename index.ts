@@ -1,4 +1,26 @@
 export { SparkSession, SparkSessionBuilder, DataFrame, GroupedData, RDD } from './src/pyspark';
+export {
+  MLlib,
+  MLBase,
+  Pipeline,
+  PipelineModel,
+  Estimator,
+  Transformer,
+  Model,
+  LogisticRegression,
+  RandomForestClassifier,
+  GBTClassifier,
+  LinearRegression,
+  KMeans,
+  VectorAssembler,
+  StringIndexer,
+  OneHotEncoder,
+  StandardScaler,
+  Evaluator,
+  MulticlassClassificationEvaluator,
+  RegressionEvaluator,
+  ClusteringEvaluator,
+} from './src/mllib';
 export { Node4jGateway } from './src/gateway';
 export { createJvmProxy } from './src/proxy';
 

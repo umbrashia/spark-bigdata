@@ -34,6 +34,33 @@ async function main(): Promise<void> {
 void main();
 ```
 
+
+## MLlib (implemented)
+
+```ts
+const lr = await spark.ml.logisticRegression();
+lr.set('maxIter', 50).set('regParam', 0.01);
+
+const assembler = await spark.ml.vectorAssembler();
+assembler.set('inputCols', ['f1', 'f2']).set('outputCol', 'features');
+
+const pipeline = await spark.ml.pipeline();
+pipeline.setStages([assembler, lr]);
+
+const model = await pipeline.fit(trainingDf);
+const predictions = await model.transform(testDf);
+
+const evaluator = await spark.ml.multiclassClassificationEvaluator();
+const score = await evaluator.evaluate(predictions);
+```
+
+For any MLlib API not wrapped yet, use generic construction:
+
+```ts
+const custom = await spark.ml.create('org.apache.spark.ml.feature.Bucketizer');
+await custom.invoke('setInputCol', 'raw');
+```
+
 ## Parity strategy
 
 - First-class wrappers in TypeScript for common PySpark-style classes (`SparkSession`, `DataFrame`, `GroupedData`, `RDD`).
