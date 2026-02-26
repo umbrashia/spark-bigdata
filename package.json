@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --test"
   },
   "repository": {
     "type": "git",
@@ -15,5 +15,14 @@
     "url": "https://github.com/umbrashia/spark-bigdata/issues"
   },
   "homepage": "https://github.com/umbrashia/spark-bigdata#readme",
-  "description": ""
+  "description": "PySpark-style Node.js facade over Apache Spark via node4j",
+  "keywords": [
+    "spark",
+    "pyspark",
+    "node4j",
+    "big-data"
+  ],
+  "dependencies": {
+    "node4j": "^0.0.2"
+  }
 }
