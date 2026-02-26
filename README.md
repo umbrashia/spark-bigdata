@@ -1,11 +1,6 @@
 # spark-bigdata
 
-A Node.js-first Spark API designed as a PySpark substitute, powered by `node4j` and JVM passthrough.
-
-## Why this exists
-
-PySpark is Python-native, while Node.js teams often need the same Spark capabilities in JavaScript.
-This package implements a **PySpark-like API surface** and includes a **generic JVM passthrough** so every Spark method is still reachable even when a dedicated JS helper is not yet added.
+A **TypeScript-only** PySpark-style Spark API for Node.js, powered by `node4j` and JVM passthrough.
 
 ## Install
 
@@ -13,13 +8,13 @@ This package implements a **PySpark-like API surface** and includes a **generic 
 npm install spark-bigdata node4j
 ```
 
-## Quick start
+## Usage (TypeScript)
 
-```js
-const { SparkSession } = require('spark-bigdata');
-const node4j = require('node4j');
+```ts
+import { SparkSession } from 'spark-bigdata';
+import node4j from 'node4j';
 
-async function main() {
+async function main(): Promise<void> {
   const spark = await SparkSession
     .builder(node4j)
     .appName('node-pyspark-parity')
@@ -30,22 +25,17 @@ async function main() {
   const df = await spark.range(0, 100);
   await df.show(5);
 
-  // Fallback path for any Spark API not explicitly wrapped:
+  // Full parity fallback for any Spark JVM method:
   await spark.invoke('catalog');
 
   await spark.stop();
 }
 
-main().catch(console.error);
+void main();
 ```
 
-## Parity model
+## Parity strategy
 
-- Explicit wrappers: `SparkSession`, `DataFrame`, `GroupedData`, `RDD`.
-- Full passthrough fallback: call any JVM Spark method through `.invoke(methodName, ...args)`.
-- Dynamic proxy support: unknown methods are forwarded at runtime so new Spark features remain accessible without waiting for JS wrapper releases.
-
-## Notes
-
-- You must provide a configured `node4j` client connected to a JVM that has Apache Spark on its classpath.
-- Serialization of JS lambdas to JVM callables depends on your `node4j` runtime strategy.
+- First-class wrappers in TypeScript for common PySpark-style classes (`SparkSession`, `DataFrame`, `GroupedData`, `RDD`).
+- Generic dynamic JVM proxy passthrough for APIs not explicitly wrapped yet.
+- `.invoke(methodName, ...args)` on wrappers to ensure newly added Spark APIs remain reachable.
