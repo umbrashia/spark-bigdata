@@ -3,6 +3,7 @@ import { createJvmProxy, type JvmHandle } from './proxy';
 import { MLlib } from './mllib';
 import { DataStreamReader, DataStreamWriter, StreamingQueryManager } from './streaming';
 import { GraphFrames } from './graphframes';
+import { PandasOnSpark } from './pandas_on_spark';
 
 export class SparkSessionBuilder {
   private readonly gateway: Node4jGateway;
@@ -94,6 +95,10 @@ export class SparkSession {
 
   get graphframes(): GraphFrames {
     return new GraphFrames(this.gateway);
+  }
+
+  get pandasApi(): PandasOnSpark {
+    return new PandasOnSpark(this.gateway, this);
   }
 
   stop(): unknown {

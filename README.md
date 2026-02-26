@@ -98,8 +98,24 @@ const ranked = await graph.pageRank({ resetProbability: 0.15, maxIter: 20 });
 
 Use `.invoke(...)` on `GraphFrame` / `GraphFrames` for unwrapped APIs.
 
+
+## Pandas API on Spark (implemented)
+
+```ts
+const psdf = await spark.pandasApi.range(0, 1000);
+const csvDf = await spark.pandasApi.readCsv('/data/events.csv', { header: true });
+
+const grouped = csvDf.groupBy('user_id');
+const stats = await grouped.sum();
+
+const sparkDf = stats.toSpark();
+await sparkDf.show(10);
+```
+
+Use `.invoke(...)` on Pandas-on-Spark wrappers for unwrapped APIs.
+
 ## Parity strategy
 
-- First-class wrappers in TypeScript for common PySpark-style classes (`SparkSession`, `DataFrame`, `GroupedData`, `RDD`, `MLlib`, `Structured Streaming`, `GraphFrames`).
+- First-class wrappers in TypeScript for common PySpark-style classes (`SparkSession`, `DataFrame`, `GroupedData`, `RDD`, `MLlib`, `Structured Streaming`, `GraphFrames`, `Pandas API on Spark`).
 - Generic dynamic JVM proxy passthrough for APIs not explicitly wrapped yet.
 - `.invoke(methodName, ...args)` on wrappers to ensure newly added Spark APIs remain reachable.
