@@ -35,6 +35,37 @@ void main();
 ```
 
 
+
+## Spark SQL & DataFrames (expanded)
+
+```ts
+const orders = await spark.read
+  .format('parquet')
+  .option('mergeSchema', true)
+  .load('/data/orders');
+
+const users = await spark.read.table('warehouse.users');
+const amountCol = await spark.functions.col('amount');
+
+const joined = await orders
+  .join(users, 'user_id', 'left')
+  .then((df) => df.withColumn('amount_bucket', amountCol));
+
+await joined.createOrReplaceTempView('orders_enriched');
+const top = await spark.sql('SELECT user_id, COUNT(*) c FROM orders_enriched GROUP BY user_id ORDER BY c DESC LIMIT 10');
+
+await top.write
+  .mode('overwrite')
+  .format('json')
+  .saveAsTable('analytics.top_users');
+```
+
+Added wrappers include:
+- DataFrame transforms/actions: `join`, `withColumn`, `drop`, `dropDuplicates`, `orderBy`, `sort`, `limit`, `distinct`, `union`, `unionByName`, `repartition`, `coalesce`, `cache`, `persist`, `unpersist`, `count`, `first`, `head`, `take`, `toJSON`, `toPandas`.
+- Batch reader/writer APIs: `spark.read` (`format`, `option(s)`, `load`, `json`, `csv`, `parquet`, `table`) and `df.write` (`format`, `mode`, `option(s)`, `partitionBy`, `bucketBy`, `sortBy`, `save`, `saveAsTable`, `insertInto`, `json`, `csv`, `parquet`).
+- SQL helpers: `spark.functions` (`col`, `lit`, `when`, `invoke`), `spark.window` (`partitionBy`, `orderBy`), and `spark.catalog` (`listDatabases`, `listTables`, `listColumns`, cache controls).
+- View helpers: `createOrReplaceTempView` and `createGlobalTempView`.
+
 ## MLlib (implemented)
 
 ```ts

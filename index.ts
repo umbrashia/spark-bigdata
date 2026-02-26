@@ -1,4 +1,17 @@
-export { SparkSession, SparkSessionBuilder, DataFrame, GroupedData, RDD } from './src/pyspark';
+export {
+  SparkSession,
+  SparkSessionBuilder,
+  DataFrame,
+  DataFrameReader,
+  DataFrameWriter,
+  GroupedData,
+  RDD,
+  Column,
+  SqlFunctions,
+  Catalog,
+  Window,
+  WindowSpec,
+} from './src/pyspark';
 export {
   MLlib,
   MLBase,

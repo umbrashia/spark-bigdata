@@ -1,8 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { SparkSessionBuilder } from '../src/pyspark';
+import { SparkSessionBuilder, SparkSession, DataFrame, Column } from '../src/pyspark';
 import { createJvmProxy, type JvmHandle } from '../src/proxy';
+
+function handle(id: string): JvmHandle {
+  return { __isJvmHandle: true, raw: { __javaObjectId: id } };
+}
 
 function createGatewayRecorder() {
   const calls: Array<[string, unknown, unknown?, unknown?]> = [];
@@ -12,20 +16,20 @@ function createGatewayRecorder() {
     gateway: {
       async getStatic(className: string, memberName: string): Promise<JvmHandle> {
         calls.push(['getStatic', className, memberName]);
-        return { __isJvmHandle: true, raw: { __javaObjectId: 'builder' } };
+        return handle(`${className}.${memberName}`);
       },
-      async call(handle: unknown, methodName: string, args: unknown[] = []): Promise<unknown> {
-        calls.push(['call', handle, methodName, args]);
+      async call(currentHandle: unknown, methodName: string, args: unknown[] = []): Promise<unknown> {
+        calls.push(['call', currentHandle, methodName, args]);
 
-        if (methodName === 'getOrCreate') {
-          return { __isJvmHandle: true, raw: { __javaObjectId: 'spark' } };
+        if (['getOrCreate', 'sql', 'read', 'write', 'catalog', 'table', 'join', 'union', 'unionByName', 'load', 'json', 'csv', 'parquet', 'col', 'lit', 'when', 'partitionBy', 'orderBy'].includes(methodName)) {
+          return handle(methodName);
         }
 
-        if (methodName === 'sql') {
-          return { __isJvmHandle: true, raw: { __javaObjectId: 'df' } };
+        if (methodName === 'apply') {
+          return handle('applied');
         }
 
-        return handle;
+        return currentHandle;
       },
     },
   };
@@ -49,14 +53,94 @@ test('SparkSessionBuilder configures and creates a SparkSession', async () => {
   assert.ok(calls.find((entry) => entry[2] === 'sql'));
 });
 
+test('Spark SQL batch reader/writer wrappers delegate and stay chainable', async () => {
+  const { calls, gateway } = createGatewayRecorder();
+  const session = new SparkSession(gateway as never, handle('spark'));
+  const loaded = await session.read.format('parquet').option('header', true).load('/tmp/in');
+
+  assert.ok(loaded instanceof DataFrame);
+
+  loaded
+    .write
+    .format('json')
+    .mode('overwrite')
+    .option('compression', 'gzip')
+    .save('/tmp/out');
+
+  assert.ok(calls.find((entry) => entry[2] === 'read'));
+  assert.ok(calls.find((entry) => entry[2] === 'format' && (entry[3] as unknown[])[0] === 'parquet'));
+  assert.ok(calls.find((entry) => entry[2] === 'load'));
+  assert.ok(calls.find((entry) => entry[2] === 'write'));
+  assert.ok(calls.find((entry) => entry[2] === 'save'));
+});
+
+test('DataFrame parity methods and temp/global views delegate through gateway', async () => {
+  const { calls, gateway } = createGatewayRecorder();
+  const left = new DataFrame(gateway as never, handle('left-df'));
+  const right = new DataFrame(gateway as never, handle('right-df'));
+  const column = new Column(gateway as never, handle('col'));
+
+  await left.join(right, 'id', 'inner');
+  await left.union(right);
+  await left.unionByName(right, true);
+  await left.withColumn('flag', column);
+  await left.createOrReplaceTempView('tmp_v');
+  await left.createGlobalTempView('global_v');
+  left.drop('a');
+  left.dropDuplicates(['id']);
+  left.orderBy('id');
+  left.sort('ts');
+  left.limit(10);
+  left.distinct();
+  left.repartition(2);
+  left.coalesce(1);
+  left.cache();
+  left.persist();
+  left.unpersist();
+  left.count();
+  left.first();
+  left.head(3);
+  left.take(2);
+  left.toJSON();
+  left.toPandas();
+
+  assert.ok(calls.find((entry) => entry[2] === 'join'));
+  assert.ok(calls.find((entry) => entry[2] === 'unionByName'));
+  assert.ok(calls.find((entry) => entry[2] === 'withColumn'));
+  assert.ok(calls.find((entry) => entry[2] === 'createOrReplaceTempView'));
+  assert.ok(calls.find((entry) => entry[2] === 'createGlobalTempView'));
+  assert.ok(calls.find((entry) => entry[2] === 'toPandas'));
+});
+
+test('column functions DSL and catalog APIs are available from SparkSession', async () => {
+  const { calls, gateway } = createGatewayRecorder();
+  const session = new SparkSession(gateway as never, handle('spark'));
+
+  await session.functions.col('name');
+  await session.functions.lit(1);
+  const cond = new Column(gateway as never, handle('condition'));
+  await session.functions.when(cond, 'x');
+  await session.window.partitionBy('group');
+  await session.window.orderBy('ts');
+
+  session.catalog.listDatabases();
+  session.catalog.listTables('default');
+  session.catalog.cacheTable('t1');
+
+  assert.ok(calls.find((entry) => entry[0] === 'getStatic' && entry[1] === 'org.apache.spark.sql.functions'));
+  assert.ok(calls.find((entry) => entry[0] === 'getStatic' && entry[1] === 'org.apache.spark.sql.expressions.Window'));
+  assert.ok(calls.find((entry) => entry[2] === 'catalog'));
+  assert.ok(calls.find((entry) => entry[2] === 'cacheTable'));
+});
+
 test('createJvmProxy forwards unknown methods for parity fallback', async () => {
   const gateway = {
-    async call(handle: unknown, methodName: string, args: unknown[]) {
-      return { ok: true, handle, methodName, args };
+    async call(currentHandle: unknown, methodName: string, args: unknown[]) {
+      return { ok: true, currentHandle, methodName, args };
     },
   };
 
-  const proxy = createJvmProxy(gateway, { __isJvmHandle: true, raw: { __javaObjectId: 'x' } });
+  const proxy = createJvmProxy(gateway, handle('x'));
   const value = (await proxy.someFutureSparkMethod('a', 42)) as {
     ok: boolean;
     methodName: string;
