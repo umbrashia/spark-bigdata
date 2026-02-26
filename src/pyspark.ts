@@ -90,6 +90,31 @@ export class SparkSession {
     return new DataFrame(this.gateway, dataFrameHandle);
   }
 
+  async createDataFrame(data: unknown, schema?: unknown, samplingRatio?: number, verifySchema?: boolean): Promise<DataFrame> {
+    const args = [data, schema, samplingRatio, verifySchema].filter((value) => value !== undefined);
+    const dataFrameHandle = (await this.gateway.call(this.handle, 'createDataFrame', args)) as JvmHandle;
+    return new DataFrame(this.gateway, dataFrameHandle);
+  }
+
+  get udf(): UDFRegistration {
+    const udfProxy = this.proxy.udf() as { __handle: JvmHandle };
+    return new UDFRegistration(this.gateway, udfProxy.__handle);
+  }
+
+  get udtf(): UDTFRegistration {
+    const udtfProxy = this.proxy.udtf() as { __handle: JvmHandle };
+    return new UDTFRegistration(this.gateway, udtfProxy.__handle);
+  }
+
+  get conf(): RuntimeConfig {
+    const confProxy = this.proxy.conf() as { __handle: JvmHandle };
+    return new RuntimeConfig(this.gateway, confProxy.__handle);
+  }
+
+  get version(): unknown {
+    return this.proxy.version();
+  }
+
   get sparkContext(): unknown {
     return this.proxy.sparkContext();
   }
@@ -563,6 +588,71 @@ export class Window {
     const windowHandle = await this.gateway.getStatic('org.apache.spark.sql.expressions.Window', 'orderBy');
     const specHandle = (await this.gateway.call(windowHandle, 'apply', columns)) as JvmHandle;
     return new WindowSpec(this.gateway, specHandle);
+  }
+}
+
+export class UDFRegistration {
+  private readonly proxy;
+
+  constructor(gateway: Node4jGateway, handle: JvmHandle) {
+    this.proxy = createJvmProxy(gateway, handle);
+  }
+
+  register(name: string, func: unknown, returnType?: unknown): unknown {
+    return returnType === undefined ? this.proxy.register(name, func) : this.proxy.register(name, func, returnType);
+  }
+
+  registerJava(name: string, className: string, returnType?: unknown): unknown {
+    return returnType === undefined ? this.proxy.registerJava(name, className) : this.proxy.registerJava(name, className, returnType);
+  }
+
+  invoke(methodName: string, ...args: unknown[]): unknown {
+    return this.proxy[methodName](...args);
+  }
+}
+
+export class UDTFRegistration {
+  private readonly proxy;
+
+  constructor(gateway: Node4jGateway, handle: JvmHandle) {
+    this.proxy = createJvmProxy(gateway, handle);
+  }
+
+  register(name: string, className: string): unknown {
+    return this.proxy.register(name, className);
+  }
+
+  invoke(methodName: string, ...args: unknown[]): unknown {
+    return this.proxy[methodName](...args);
+  }
+}
+
+export class RuntimeConfig {
+  private readonly proxy;
+
+  constructor(gateway: Node4jGateway, handle: JvmHandle) {
+    this.proxy = createJvmProxy(gateway, handle);
+  }
+
+  set(key: string, value: unknown): RuntimeConfig {
+    this.proxy.set(key, value);
+    return this;
+  }
+
+  get(key: string, defaultValue?: string): unknown {
+    return defaultValue === undefined ? this.proxy.get(key) : this.proxy.get(key, defaultValue);
+  }
+
+  unset(key: string): unknown {
+    return this.proxy.unset(key);
+  }
+
+  isModifiable(key: string): unknown {
+    return this.proxy.isModifiable(key);
+  }
+
+  invoke(methodName: string, ...args: unknown[]): unknown {
+    return this.proxy[methodName](...args);
   }
 }
 

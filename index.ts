@@ -11,6 +11,9 @@ export {
   Catalog,
   Window,
   WindowSpec,
+  UDFRegistration,
+  UDTFRegistration,
+  RuntimeConfig,
 } from './src/pyspark';
 export {
   MLlib,

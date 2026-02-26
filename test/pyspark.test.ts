@@ -21,7 +21,7 @@ function createGatewayRecorder() {
       async call(currentHandle: unknown, methodName: string, args: unknown[] = []): Promise<unknown> {
         calls.push(['call', currentHandle, methodName, args]);
 
-        if (['getOrCreate', 'sql', 'read', 'write', 'catalog', 'table', 'join', 'union', 'unionByName', 'load', 'json', 'csv', 'parquet', 'col', 'lit', 'when', 'partitionBy', 'orderBy'].includes(methodName)) {
+        if (['getOrCreate', 'sql', 'read', 'write', 'catalog', 'table', 'join', 'union', 'unionByName', 'load', 'json', 'csv', 'parquet', 'col', 'lit', 'when', 'partitionBy', 'orderBy', 'createDataFrame', 'udf', 'udtf', 'conf'].includes(methodName)) {
           return handle(methodName);
         }
 
@@ -131,6 +131,30 @@ test('column functions DSL and catalog APIs are available from SparkSession', as
   assert.ok(calls.find((entry) => entry[0] === 'getStatic' && entry[1] === 'org.apache.spark.sql.expressions.Window'));
   assert.ok(calls.find((entry) => entry[2] === 'catalog'));
   assert.ok(calls.find((entry) => entry[2] === 'cacheTable'));
+});
+
+
+
+test('SparkSession parity wrappers expose createDataFrame, udf/udtf, conf, and version', async () => {
+  const { calls, gateway } = createGatewayRecorder();
+  const session = new SparkSession(gateway as never, handle('spark'));
+
+  const created = await session.createDataFrame([{ id: 1 }], { id: 'int' });
+  assert.ok(created instanceof DataFrame);
+
+  session.udf.register('my_udf', () => 1);
+  session.udtf.register('my_udtf', 'com.example.MyTableFn');
+  session.conf.set('spark.sql.shuffle.partitions', 8);
+  session.conf.get('spark.sql.shuffle.partitions');
+  session.conf.unset('spark.sql.shuffle.partitions');
+  session.version;
+
+  assert.ok(calls.find((entry) => entry[2] === 'createDataFrame'));
+  assert.ok(calls.find((entry) => entry[2] === 'udf'));
+  assert.ok(calls.find((entry) => entry[2] === 'udtf'));
+  assert.ok(calls.find((entry) => entry[2] === 'conf'));
+  assert.ok(calls.find((entry) => entry[2] === 'register' && (entry[3] as unknown[])[0] === 'my_udf'));
+  assert.ok(calls.find((entry) => entry[2] === 'version'));
 });
 
 test('createJvmProxy forwards unknown methods for parity fallback', async () => {

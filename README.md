@@ -64,6 +64,7 @@ Added wrappers include:
 - DataFrame transforms/actions: `join`, `withColumn`, `drop`, `dropDuplicates`, `orderBy`, `sort`, `limit`, `distinct`, `union`, `unionByName`, `repartition`, `coalesce`, `cache`, `persist`, `unpersist`, `count`, `first`, `head`, `take`, `toJSON`, `toPandas`.
 - Batch reader/writer APIs: `spark.read` (`format`, `option(s)`, `load`, `json`, `csv`, `parquet`, `table`) and `df.write` (`format`, `mode`, `option(s)`, `partitionBy`, `bucketBy`, `sortBy`, `save`, `saveAsTable`, `insertInto`, `json`, `csv`, `parquet`).
 - SQL helpers: `spark.functions` (`col`, `lit`, `when`, `invoke`), `spark.window` (`partitionBy`, `orderBy`), and `spark.catalog` (`listDatabases`, `listTables`, `listColumns`, cache controls).
+- SparkSession parity helpers: `createDataFrame`, typed `udf`/`udtf` registration wrappers, `conf` runtime config wrapper, and `version` convenience accessor.
 - View helpers: `createOrReplaceTempView` and `createGlobalTempView`.
 
 ## MLlib (implemented)
