@@ -2,6 +2,7 @@ import { Node4jGateway, type Node4jClient } from './gateway';
 import { createJvmProxy, type JvmHandle } from './proxy';
 import { MLlib } from './mllib';
 import { DataStreamReader, DataStreamWriter, StreamingQueryManager } from './streaming';
+import { GraphFrames } from './graphframes';
 
 export class SparkSessionBuilder {
   private readonly gateway: Node4jGateway;
@@ -89,6 +90,10 @@ export class SparkSession {
   get streams(): StreamingQueryManager {
     const managerProxy = this.proxy.streams() as { __handle: JvmHandle };
     return new StreamingQueryManager(this.gateway, managerProxy.__handle);
+  }
+
+  get graphframes(): GraphFrames {
+    return new GraphFrames(this.gateway);
   }
 
   stop(): unknown {

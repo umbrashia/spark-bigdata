@@ -22,6 +22,7 @@ export {
   ClusteringEvaluator,
 } from './src/mllib';
 export { DataStreamReader, DataStreamWriter, StreamingQuery, StreamingQueryManager } from './src/streaming';
+export { GraphFrames, GraphFrame } from './src/graphframes';
 export { Node4jGateway } from './src/gateway';
 export { createJvmProxy } from './src/proxy';
 

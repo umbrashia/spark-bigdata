@@ -82,8 +82,24 @@ await query.stop();
 
 Use `spark.streams` to access query-manager behavior (`get`, `awaitAnyTermination`, `resetTerminated`) and `.invoke(...)` for any unwrapped streaming API.
 
+
+## GraphFrames (implemented)
+
+```ts
+const vertices = await spark.range(0, 100);
+const edges = await spark.range(0, 200);
+
+const graph = await spark.graphframes.create(vertices, edges);
+const triangles = await graph.find('(a)-[ab]->(b); (b)-[bc]->(c); (c)-[ca]->(a)');
+
+const bfs = await graph.bfs('id = 1', 'id = 42', 'relationship = "friend"', 5);
+const ranked = await graph.pageRank({ resetProbability: 0.15, maxIter: 20 });
+```
+
+Use `.invoke(...)` on `GraphFrame` / `GraphFrames` for unwrapped APIs.
+
 ## Parity strategy
 
-- First-class wrappers in TypeScript for common PySpark-style classes (`SparkSession`, `DataFrame`, `GroupedData`, `RDD`, `MLlib`, `Structured Streaming`).
+- First-class wrappers in TypeScript for common PySpark-style classes (`SparkSession`, `DataFrame`, `GroupedData`, `RDD`, `MLlib`, `Structured Streaming`, `GraphFrames`).
 - Generic dynamic JVM proxy passthrough for APIs not explicitly wrapped yet.
 - `.invoke(methodName, ...args)` on wrappers to ensure newly added Spark APIs remain reachable.
