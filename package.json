@@ -1,9 +1,16 @@
 {
   "name": "spark-bigdata",
   "version": "1.0.0",
-  "main": "index.js",
+  "description": "PySpark-style TypeScript facade over Apache Spark via node4j",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsc -p tsconfig.json",
+    "test": "node --import tsx --test test/**/*.test.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "repository": {
     "type": "git",
@@ -15,5 +22,19 @@
     "url": "https://github.com/umbrashia/spark-bigdata/issues"
   },
   "homepage": "https://github.com/umbrashia/spark-bigdata#readme",
-  "description": ""
+  "keywords": [
+    "spark",
+    "pyspark",
+    "node4j",
+    "big-data",
+    "typescript"
+  ],
+  "dependencies": {
+    "node4j": "^0.0.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "tsx": "^4.19.2",
+    "typescript": "^5.8.2"
+  }
 }
