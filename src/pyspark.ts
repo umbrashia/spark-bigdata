@@ -265,6 +265,11 @@ export class DataFrame {
     return this.proxy.toPandas();
   }
 
+  async withWatermark(eventTimeColumn: string, delayThreshold: string): Promise<DataFrame> {
+    const dataFrameHandle = (await this.gateway.call(this.handle, 'withWatermark', [eventTimeColumn, delayThreshold])) as JvmHandle;
+    return new DataFrame(this.gateway, dataFrameHandle);
+  }
+
   async createOrReplaceTempView(viewName: string): Promise<void> {
     await this.gateway.call(this.handle, 'createOrReplaceTempView', [viewName]);
   }

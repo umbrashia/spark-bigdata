@@ -120,25 +120,33 @@ await custom.invoke('setInputCol', 'raw');
 ```
 
 
-## Structured Streaming (implemented)
+## Structured Streaming (expanded)
 
 ```ts
 const input = await spark.readStream
-  .format('json')
-  .option('maxFilesPerTrigger', 1)
-  .load('/data/in');
+  .kafka({ 'kafka.bootstrap.servers': 'localhost:9092', subscribe: 'events' })
+  .load();
 
-const query = await input.writeStream
-  .format('parquet')
+const query = await (await input.withWatermark('timestamp', '10 minutes')).writeStream
   .outputMode('append')
-  .queryName('events')
-  .start('/data/out');
+  .foreachBatch((batchDf: unknown, batchId: number) => {
+    console.log('batch', batchId, batchDf);
+  })
+  .processingTime('10 seconds')
+  .then((w) => w.start('/data/out'));
 
-await query.processAllAvailable();
+const progress = query.lastProgress();
+const err = query.exception();
 await query.stop();
 ```
 
-Use `spark.streams` to access query-manager behavior (`get`, `awaitAnyTermination`, `resetTerminated`) and `.invoke(...)` for any unwrapped streaming API.
+Added streaming wrappers include:
+- Advanced sinks/helpers: `foreachBatch`, `foreach`, `toTable` and `kafka`/`rate`/`textSocket` source helpers.
+- Event-time convenience: `DataFrame.withWatermark(eventTimeColumn, delayThreshold)`.
+- Trigger builder helpers: `processingTime`, `once`, `availableNow` (plus direct `trigger`).
+- Rich query/query-manager controls: `lastProgress`, `recentProgress`, `exception`, `isActive`, `id`, `runId`, `name`, `explain`, `getByName`, `addListener`, `removeListener`.
+
+Use `.invoke(...)` on wrappers for unwrapped streaming APIs.
 
 
 ## GraphFrames (implemented)

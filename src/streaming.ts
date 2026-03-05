@@ -2,6 +2,25 @@ import { createJvmProxy, type JvmHandle } from './proxy';
 import type { Node4jGateway } from './gateway';
 import { DataFrame } from './pyspark';
 
+export class TriggerBuilder {
+  constructor(private readonly gateway: Node4jGateway) {}
+
+  async processingTime(interval: string): Promise<unknown> {
+    const triggerFactory = await this.gateway.getStatic('org.apache.spark.sql.streaming.Trigger', 'ProcessingTime');
+    return this.gateway.call(triggerFactory, 'apply', [interval]);
+  }
+
+  async once(): Promise<unknown> {
+    const triggerFactory = await this.gateway.getStatic('org.apache.spark.sql.streaming.Trigger', 'Once');
+    return this.gateway.call(triggerFactory, 'apply', []);
+  }
+
+  async availableNow(): Promise<unknown> {
+    const triggerFactory = await this.gateway.getStatic('org.apache.spark.sql.streaming.Trigger', 'AvailableNow');
+    return this.gateway.call(triggerFactory, 'apply', []);
+  }
+}
+
 export class DataStreamReader {
   private readonly gateway: Node4jGateway;
   private readonly handle: JvmHandle;
@@ -34,6 +53,18 @@ export class DataStreamReader {
     }
 
     return this;
+  }
+
+  kafka(options: Record<string, unknown>): DataStreamReader {
+    return this.format('kafka').options(options);
+  }
+
+  rate(options: Record<string, unknown> = {}): DataStreamReader {
+    return this.format('rate').options(options);
+  }
+
+  textSocket(host: string, port: number, options: Record<string, unknown> = {}): DataStreamReader {
+    return this.format('socket').option('host', host).option('port', port).options(options);
   }
 
   async load(path?: string): Promise<DataFrame> {
@@ -95,6 +126,34 @@ export class DataStreamWriter {
     return this;
   }
 
+  async processingTime(interval: string): Promise<this> {
+    const trigger = await new TriggerBuilder(this.gateway).processingTime(interval);
+    this.trigger(trigger);
+    return this;
+  }
+
+  async once(): Promise<this> {
+    const trigger = await new TriggerBuilder(this.gateway).once();
+    this.trigger(trigger);
+    return this;
+  }
+
+  async availableNow(): Promise<this> {
+    const trigger = await new TriggerBuilder(this.gateway).availableNow();
+    this.trigger(trigger);
+    return this;
+  }
+
+  foreachBatch(fn: unknown): this {
+    void this.proxy.foreachBatch(fn);
+    return this;
+  }
+
+  foreach(writer: unknown): this {
+    void this.proxy.foreach(writer);
+    return this;
+  }
+
   partitionBy(...columns: string[]): this {
     void this.proxy.partitionBy(...columns);
     return this;
@@ -152,6 +211,34 @@ export class StreamingQuery {
     return this.proxy.recentProgress();
   }
 
+  lastProgress(): unknown {
+    return this.proxy.lastProgress();
+  }
+
+  exception(): unknown {
+    return this.proxy.exception();
+  }
+
+  isActive(): unknown {
+    return this.proxy.isActive();
+  }
+
+  id(): unknown {
+    return this.proxy.id();
+  }
+
+  runId(): unknown {
+    return this.proxy.runId();
+  }
+
+  name(): unknown {
+    return this.proxy.name();
+  }
+
+  explain(extended = false): unknown {
+    return this.proxy.explain(extended);
+  }
+
   invoke(methodName: string, ...args: unknown[]): unknown {
     return this.proxy[methodName](...args);
   }
@@ -181,6 +268,17 @@ export class StreamingQueryManager {
     return new StreamingQuery(this.gateway, queryProxy.__handle);
   }
 
+  async getByName(queryName: string): Promise<StreamingQuery | null> {
+    const result = await this.proxy.get(queryName);
+
+    if (!result) {
+      return null;
+    }
+
+    const queryProxy = result as { __handle: JvmHandle };
+    return new StreamingQuery(this.gateway, queryProxy.__handle);
+  }
+
   awaitAnyTermination(timeoutMs?: number): unknown {
     if (typeof timeoutMs === 'number') {
       return this.proxy.awaitAnyTermination(timeoutMs);
@@ -191,6 +289,14 @@ export class StreamingQueryManager {
 
   resetTerminated(): unknown {
     return this.proxy.resetTerminated();
+  }
+
+  addListener(listener: unknown): unknown {
+    return this.proxy.addListener(listener);
+  }
+
+  removeListener(listener: unknown): unknown {
+    return this.proxy.removeListener(listener);
   }
 
   invoke(methodName: string, ...args: unknown[]): unknown {
