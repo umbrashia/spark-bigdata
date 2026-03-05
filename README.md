@@ -149,18 +149,29 @@ Added streaming wrappers include:
 Use `.invoke(...)` on wrappers for unwrapped streaming APIs.
 
 
-## GraphFrames (implemented)
+## GraphFrames (expanded)
 
 ```ts
 const vertices = await spark.range(0, 100);
 const edges = await spark.range(0, 200);
 
 const graph = await spark.graphframes.create(vertices, edges);
-const triangles = await graph.find('(a)-[ab]->(b); (b)-[bc]->(c); (c)-[ca]->(a)');
+const motif = await graph.motif('(a)-[e]->(b); (b)-[e2]->(c)');
 
-const bfs = await graph.bfs('id = 1', 'id = 42', 'relationship = "friend"', 5);
+const cc = await graph.connectedComponents({ checkpointInterval: 2, broadcastThreshold: 10 });
+const scc = await graph.stronglyConnectedComponents(10);
+const lp = await graph.labelPropagation(5);
+const shortest = await graph.shortestPaths(['1', '42']);
+const triangles = await graph.triangleCount();
+
 const ranked = await graph.pageRank({ resetProbability: 0.15, maxIter: 20 });
+ranked.cache().persist().unpersist();
 ```
+
+Added GraphFrames wrappers include:
+- Algorithms: `connectedComponents`, `stronglyConnectedComponents`, `labelPropagation`, `shortestPaths`, `triangleCount`, plus existing `bfs` and `pageRank`.
+- Motif/query helpers: `motif` alias for `find`, plus `filterVertices`, `filterEdges`, `filterTriplets`, and `dropIsolatedVertices`.
+- Persistence wrappers: `cache`, `persist`, `unpersist`.
 
 Use `.invoke(...)` on `GraphFrame` / `GraphFrames` for unwrapped APIs.
 

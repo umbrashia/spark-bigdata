@@ -33,15 +33,15 @@ function createNode4jRecorder() {
           return { __javaObjectId: 'df' };
         }
 
-        if (methodName === 'inDegrees' || methodName === 'find' || methodName === 'run') {
+        if (['inDegrees', 'find', 'triangleCount', 'run'].includes(methodName)) {
           return { __javaObjectId: `df-${methodName}` };
         }
 
-        if (methodName === 'bfs' || methodName === 'pageRank') {
+        if (['bfs', 'pageRank', 'connectedComponents', 'stronglyConnectedComponents', 'labelPropagation', 'shortestPaths'].includes(methodName)) {
           return { __javaObjectId: `${methodName}-builder` };
         }
 
-        if (methodName === 'filterVertices') {
+        if (['filterVertices', 'filterEdges', 'filterTriplets', 'dropIsolatedVertices'].includes(methodName)) {
           return { __javaObjectId: 'graph-filtered' };
         }
 
@@ -65,22 +65,44 @@ test('GraphFrames create bridges JVM GraphFrame constructor', async () => {
   assert.ok(recorder.calls.some((entry) => entry.method === 'inDegrees'));
 });
 
-test('GraphFrame bfs and pageRank builders delegate to run()', async () => {
+test('GraphFrame advanced algorithms and motif helpers delegate to JVM builders', async () => {
   const recorder = createNode4jRecorder();
   const spark = await SparkSession.builder(recorder.client).getOrCreate();
   const vertices = await spark.range(0, 3);
   const edges = await spark.range(0, 3);
   const graph = await spark.graphframes.create(vertices, edges);
 
-  const bfsResult = await graph.bfs("id = 1", "id = 2", 'relationship = "friend"', 4);
+  const bfsResult = await graph.bfs('id = 1', 'id = 2', 'relationship = "friend"', 4);
   const prResult = await graph.pageRank({ resetProbability: 0.15, maxIter: 10 });
+  const cc = await graph.connectedComponents({ checkpointInterval: 2, broadcastThreshold: 10, algorithm: 'graphframes' });
+  const scc = await graph.stronglyConnectedComponents(5);
+  const lp = await graph.labelPropagation(5);
+  const sp = await graph.shortestPaths(['a', 'b']);
+  const tc = await graph.triangleCount();
+  const motif = await graph.motif('(a)-[e]->(b)');
+
   const filtered = await prResult.filterVertices('pagerank > 0.1');
-  const matches = await filtered.find('(a)-[e]->(b)');
+  await filtered.filterEdges('src != dst');
+  await filtered.filterTriplets('src.id != dst.id');
+  await filtered.dropIsolatedVertices();
+  filtered.cache().persist().unpersist();
 
   assert.ok(bfsResult);
-  assert.ok(matches);
-  assert.ok(recorder.calls.some((entry) => entry.method === 'bfs'));
-  assert.ok(recorder.calls.some((entry) => entry.method === 'pageRank'));
+  assert.ok(motif);
+  assert.ok(cc);
+  assert.ok(scc);
+  assert.ok(lp);
+  assert.ok(sp);
+  assert.ok(tc);
+  assert.ok(recorder.calls.some((entry) => entry.method === 'connectedComponents'));
+  assert.ok(recorder.calls.some((entry) => entry.method === 'stronglyConnectedComponents'));
+  assert.ok(recorder.calls.some((entry) => entry.method === 'labelPropagation'));
+  assert.ok(recorder.calls.some((entry) => entry.method === 'shortestPaths'));
+  assert.ok(recorder.calls.some((entry) => entry.method === 'triangleCount'));
+  assert.ok(recorder.calls.some((entry) => entry.method === 'landmarks'));
+  assert.ok(recorder.calls.some((entry) => entry.method === 'filterTriplets'));
+  assert.ok(recorder.calls.some((entry) => entry.method === 'cache'));
+  assert.ok(recorder.calls.some((entry) => entry.method === 'persist'));
+  assert.ok(recorder.calls.some((entry) => entry.method === 'unpersist'));
   assert.ok(recorder.calls.some((entry) => entry.method === 'run'));
-  assert.ok(recorder.calls.some((entry) => entry.method === 'find'));
 });

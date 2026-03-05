@@ -7,6 +7,18 @@ export class GraphFrame {
   private readonly handle: JvmHandle;
   private readonly proxy;
 
+  private async wrapDataFrameCall(methodName: string, args: unknown[] = []): Promise<DataFrame> {
+    const result = await this.proxy[methodName](...args);
+    const dfProxy = result as { __handle: JvmHandle };
+    return new DataFrame(this.gateway, dfProxy.__handle);
+  }
+
+  private async wrapGraphCall(methodName: string, args: unknown[] = []): Promise<GraphFrame> {
+    const result = await this.proxy[methodName](...args);
+    const graphProxy = result as { __handle: JvmHandle };
+    return new GraphFrame(this.gateway, graphProxy.__handle);
+  }
+
   constructor(gateway: Node4jGateway, handle: JvmHandle) {
     this.gateway = gateway;
     this.handle = handle;
@@ -24,45 +36,59 @@ export class GraphFrame {
   }
 
   async inDegrees(): Promise<DataFrame> {
-    const result = await this.proxy.inDegrees();
-    const dfProxy = result as { __handle: JvmHandle };
-    return new DataFrame(this.gateway, dfProxy.__handle);
+    return this.wrapDataFrameCall('inDegrees');
   }
 
   async outDegrees(): Promise<DataFrame> {
-    const result = await this.proxy.outDegrees();
-    const dfProxy = result as { __handle: JvmHandle };
-    return new DataFrame(this.gateway, dfProxy.__handle);
+    return this.wrapDataFrameCall('outDegrees');
   }
 
   async degrees(): Promise<DataFrame> {
-    const result = await this.proxy.degrees();
-    const dfProxy = result as { __handle: JvmHandle };
-    return new DataFrame(this.gateway, dfProxy.__handle);
+    return this.wrapDataFrameCall('degrees');
   }
 
   async find(pattern: string): Promise<DataFrame> {
-    const result = await this.proxy.find(pattern);
-    const dfProxy = result as { __handle: JvmHandle };
-    return new DataFrame(this.gateway, dfProxy.__handle);
+    return this.wrapDataFrameCall('find', [pattern]);
+  }
+
+  async motif(pattern: string): Promise<DataFrame> {
+    return this.find(pattern);
   }
 
   async filterVertices(condition: string): Promise<GraphFrame> {
-    const result = await this.proxy.filterVertices(condition);
-    const graphProxy = result as { __handle: JvmHandle };
-    return new GraphFrame(this.gateway, graphProxy.__handle);
+    return this.wrapGraphCall('filterVertices', [condition]);
   }
 
   async filterEdges(condition: string): Promise<GraphFrame> {
-    const result = await this.proxy.filterEdges(condition);
-    const graphProxy = result as { __handle: JvmHandle };
-    return new GraphFrame(this.gateway, graphProxy.__handle);
+    return this.wrapGraphCall('filterEdges', [condition]);
+  }
+
+  async filterTriplets(condition: string): Promise<GraphFrame> {
+    return this.wrapGraphCall('filterTriplets', [condition]);
   }
 
   async dropIsolatedVertices(): Promise<GraphFrame> {
-    const result = await this.proxy.dropIsolatedVertices();
-    const graphProxy = result as { __handle: JvmHandle };
-    return new GraphFrame(this.gateway, graphProxy.__handle);
+    return this.wrapGraphCall('dropIsolatedVertices');
+  }
+
+  cache(): this {
+    void this.proxy.cache();
+    return this;
+  }
+
+  persist(storageLevel?: unknown): this {
+    if (storageLevel === undefined) {
+      void this.proxy.persist();
+    } else {
+      void this.proxy.persist(storageLevel);
+    }
+
+    return this;
+  }
+
+  unpersist(blocking = false): this {
+    void this.proxy.unpersist(blocking);
+    return this;
   }
 
   async bfs(fromExpr: string, toExpr: string, edgeFilter?: string, maxPathLength?: number): Promise<DataFrame> {
@@ -116,6 +142,67 @@ export class GraphFrame {
 
     const result = await builder.run();
     return new GraphFrame(this.gateway, result.__handle);
+  }
+
+  async connectedComponents(config: { checkpointInterval?: number; broadcastThreshold?: number; algorithm?: string } = {}): Promise<DataFrame> {
+    const builder = this.proxy.connectedComponents() as {
+      checkpointInterval: (value: number) => unknown;
+      broadcastThreshold: (value: number) => unknown;
+      algorithm: (value: string) => unknown;
+      run: () => Promise<{ __handle: JvmHandle }>;
+    };
+
+    if (typeof config.checkpointInterval === 'number') {
+      builder.checkpointInterval(config.checkpointInterval);
+    }
+
+    if (typeof config.broadcastThreshold === 'number') {
+      builder.broadcastThreshold(config.broadcastThreshold);
+    }
+
+    if (typeof config.algorithm === 'string') {
+      builder.algorithm(config.algorithm);
+    }
+
+    const result = await builder.run();
+    return new DataFrame(this.gateway, result.__handle);
+  }
+
+  async stronglyConnectedComponents(maxIter: number): Promise<DataFrame> {
+    const builder = this.proxy.stronglyConnectedComponents() as {
+      maxIter: (value: number) => unknown;
+      run: () => Promise<{ __handle: JvmHandle }>;
+    };
+
+    builder.maxIter(maxIter);
+    const result = await builder.run();
+    return new DataFrame(this.gateway, result.__handle);
+  }
+
+  async labelPropagation(maxIter: number): Promise<DataFrame> {
+    const builder = this.proxy.labelPropagation() as {
+      maxIter: (value: number) => unknown;
+      run: () => Promise<{ __handle: JvmHandle }>;
+    };
+
+    builder.maxIter(maxIter);
+    const result = await builder.run();
+    return new DataFrame(this.gateway, result.__handle);
+  }
+
+  async shortestPaths(landmarks: string[]): Promise<DataFrame> {
+    const builder = this.proxy.shortestPaths() as {
+      landmarks: (value: string[]) => unknown;
+      run: () => Promise<{ __handle: JvmHandle }>;
+    };
+
+    builder.landmarks(landmarks);
+    const result = await builder.run();
+    return new DataFrame(this.gateway, result.__handle);
+  }
+
+  async triangleCount(): Promise<DataFrame> {
+    return this.wrapDataFrameCall('triangleCount');
   }
 
   toJvmHandle(): JvmHandle {
